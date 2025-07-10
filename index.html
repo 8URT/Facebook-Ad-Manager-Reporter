@@ -11,8 +11,8 @@
 
 <div id="fileUploadContainer">
   <h1>Generate Your Ads Report</h1>
-  <p>Upload a CSV file containing your ad performance data to create a dynamic report.</p>
-  <input type="file" id="csvFileInput" accept=".csv" />
+  <p>Upload a JSON file containing your ad performance data to create a dynamic report.</p>
+  <input type="file" id="jsonFileInput" accept=".json" />
   <button id="generateReportBtn" disabled>Generate Report</button>
   <div id="fileError" class="error-message"></div>
 </div>
@@ -71,13 +71,13 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const csvFileInput = document.getElementById('csvFileInput');
+  // CHANGE: reference jsonFileInput instead of csvFileInput
+  const jsonFileInput = document.getElementById('jsonFileInput');
   const generateReportBtn = document.getElementById('generateReportBtn');
   const fileError = document.getElementById('fileError');
   const reportContainer = document.getElementById('reportContainer');
@@ -98,8 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Set current date
   currentDateElem.textContent = new Date().toISOString().slice(0, 10);
 
-  csvFileInput.addEventListener('change', () => {
-    if (csvFileInput.files.length > 0) {
+  // CHANGE: event listener for jsonFileInput
+  jsonFileInput.addEventListener('change', () => {
+    if (jsonFileInput.files.length > 0) {
       generateReportBtn.disabled = false;
       fileError.textContent = '';
     } else {
@@ -108,42 +109,39 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   generateReportBtn.addEventListener('click', () => {
-    const file = csvFileInput.files[0];
+    const file = jsonFileInput.files[0];
     if (file) {
-      parseCSV(file);
+      // CHANGE: call parseJSON instead of parseCSV
+      parseJSON(file);
     } else {
-      fileError.textContent = 'Please select a CSV file to upload.';
+      fileError.textContent = 'Please select a JSON file to upload.';
     }
   });
 
   downloadPdfBtn.addEventListener('click', generatePdf);
 
-  function parseCSV(file) {
-    PapaParse.parse(file, {
-      header: true, // Assuming the first row is headers
-      dynamicTyping: true, // Automatically convert numbers, etc.
-      skipEmptyLines: true,
-      complete: function(results) {
-        if (results.errors.length) {
-          fileError.textContent = 'Error parsing CSV: ' + results.errors[0].message;
+  // NEW FUNCTION: parseJSON
+  function parseJSON(file) {
+    const reader = new FileReader();
+
+    reader.onload = function(event) {
+      try {
+        const jsonString = event.target.result;
+        const data = JSON.parse(jsonString);
+
+        if (!Array.isArray(data) || data.length === 0) {
+          fileError.textContent = 'JSON file is empty or does not contain a valid array of data.';
           reportContainer.style.display = 'none';
           return;
         }
 
-        const data = results.data;
-        if (data.length === 0) {
-          fileError.textContent = 'CSV file is empty or contains no valid data.';
-          reportContainer.style.display = 'none';
-          return;
-        }
-
-        // Validate expected columns based on your provided CSV sample
+        // Validate expected columns (same as CSV, now applied to JSON objects)
         const requiredHeaders = ["Reporting starts", "Reporting ends", "Impressions", "Reach", "Clicks (all)", "CTR (all)", "Page engagement"];
         const actualHeaders = Object.keys(data[0]);
         const missingHeaders = requiredHeaders.filter(header => !actualHeaders.includes(header));
 
         if (missingHeaders.length > 0) {
-          fileError.textContent = `Missing required CSV columns: ${missingHeaders.join(', ')}. Please ensure your CSV has these exact headers.`;
+          fileError.textContent = `Missing required JSON keys: ${missingHeaders.join(', ')}. Please ensure your JSON has these exact keys.`;
           reportContainer.style.display = 'none';
           return;
         }
@@ -151,13 +149,21 @@ document.addEventListener('DOMContentLoaded', () => {
         renderReport(data);
         reportContainer.style.display = 'block';
         fileError.textContent = ''; // Clear any previous errors
-      },
-      error: function(err) {
-        fileError.textContent = 'Failed to read CSV file: ' + err.message;
+
+      } catch (e) {
+        fileError.textContent = 'Error parsing JSON file: ' + e.message;
         reportContainer.style.display = 'none';
       }
-    });
+    };
+
+    reader.onerror = function(event) {
+      fileError.textContent = 'Failed to read JSON file: ' + event.target.error;
+      reportContainer.style.display = 'none';
+    };
+
+    reader.readAsText(file); // Read the file as text
   }
+
 
   function renderReport(data) {
     // Clear previous data
@@ -166,22 +172,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let totalImpressions = 0;
     let totalReach = 0;
     let totalClicks = 0;
-    let totalPageEngagement = 0; // New total for Page Engagement
+    let totalPageEngagement = 0;
 
-    const dates = []; // We'll use 'Reporting starts' for dates
+    const dates = [];
     const impressionsData = [];
     const reachData = [];
     const clicksData = [];
 
     // Populate table and collect chart data
     data.forEach(row => {
-      // Use the new column names from your CSV sample
       const startDate = row['Reporting starts'];
       const impressions = parseInt(row['Impressions']) || 0;
       const reach = parseInt(row['Reach']) || 0;
-      const clicks = parseInt(row['Clicks (all)']) || 0; // Corrected header
-      const ctr = parseFloat(row['CTR (all)']) || 0; // Corrected header
-      const pageEngagement = parseInt(row['Page engagement']) || 0; // New metric
+      const clicks = parseInt(row['Clicks (all)']) || 0;
+      const ctr = parseFloat(row['CTR (all)']) || 0;
+      const pageEngagement = parseInt(row['Page engagement']) || 0;
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -190,13 +195,14 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${reach.toLocaleString()}</td>
         <td>${ctr.toFixed(2)}</td>
         <td>${clicks.toLocaleString()}</td>
-        <td>${pageEngagement.toLocaleString()}</td> `;
+        <td>${pageEngagement.toLocaleString()}</td>
+      `;
       reportTableBody.appendChild(tr);
 
       totalImpressions += impressions;
       totalReach += reach;
       totalClicks += clicks;
-      totalPageEngagement += pageEngagement; // Accumulate page engagement
+      totalPageEngagement += pageEngagement;
 
       dates.push(startDate);
       impressionsData.push(impressions);
@@ -213,10 +219,11 @@ document.addEventListener('DOMContentLoaded', () => {
       <td>${totalReach.toLocaleString()}</td>
       <td>-</td>
       <td>${totalClicks.toLocaleString()}</td>
-      <td>${totalPageEngagement.toLocaleString()}</td> `;
+      <td>${totalPageEngagement.toLocaleString()}</td>
+    `;
     reportTableBody.appendChild(totalRow);
 
-    // Update KPIs (Impressions, Reach, Clicks are still the main KPIs)
+    // Update KPIs
     totalReachElem.textContent = totalReach.toLocaleString();
     totalImpressionsElem.textContent = totalImpressions.toLocaleString();
     totalClicksElem.textContent = totalClicks.toLocaleString();
@@ -226,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
     summaryImpressionsElem.textContent = totalImpressions.toLocaleString();
     summaryClicksElem.textContent = totalClicks.toLocaleString();
 
-    // Set reporting period - use 'Reporting starts' and 'Reporting ends' from the data
+    // Set reporting period
     const firstDate = dates.length > 0 ? data[0]['Reporting starts'] : 'N/A';
     const lastDate = dates.length > 0 ? data[data.length - 1]['Reporting ends'] : 'N/A';
     reportingPeriodElem.textContent = `${firstDate} to ${lastDate}`;
@@ -237,11 +244,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderChart(dates, reachData, clicksData) {
     if (reportChart) {
-      reportChart.destroy(); // Destroy previous chart instance
+      reportChart.destroy();
     }
 
     const ctx = document.getElementById('reportChart').getContext('2d');
-    const scaleFactor = 30; // Adjust as needed for visual balance between Reach and Clicks bars
+    const scaleFactor = 30;
     const scaledClicks = clicksData.map(c => c * scaleFactor);
 
     reportChart = new Chart(ctx, {
@@ -279,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
               align: 'start',
               font: { weight: 'bold', size: 12 },
               formatter: function(value, context) {
-                return clicksData[context.dataIndex].toLocaleString(); // Show actual clicks
+                return clicksData[context.dataIndex].toLocaleString();
               }
             }
           }
@@ -287,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       options: {
         responsive: true,
-        maintainAspectRatio: false, // Allow custom height
+        maintainAspectRatio: false,
         scales: {
           y: {
             beginAtZero: true,
@@ -325,23 +332,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     await html2canvas(reportElement, {
-      scale: 2, // Increase scale for better resolution
-      useCORS: true, // Set to true if your logo or other assets are from a different origin
+      scale: 2,
+      useCORS: true,
       windowWidth: reportElement.scrollWidth,
       windowHeight: reportElement.scrollHeight
     }).then(canvas => {
       const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 595.28; // A4 width in points (210mm @ 72dpi = 595.28pt)
-      const pageHeight = 841.89; // A4 height in points (297mm @ 72dpi = 841.89pt)
+      const imgWidth = 595.28;
+      const pageHeight = 841.89;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
 
-      // Add image to PDF
       doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
-      // If the content is taller than one page, add new pages
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         doc.addPage();
