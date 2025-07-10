@@ -38,6 +38,8 @@
     --oxford-blue-rgb: 27, 38, 59;
     --yinmn-blue-rgb: 65, 90, 119;
     --silver-lake-blue-rgb: 119, 141, 169;
+    --red-kpi-rgb: 221, 51, 51; /* RGB for #dd3333 */
+
 
     /* New palette (kept for other elements if used, but chart will use default) */
     --seal-brown: #582f0eff;
@@ -88,8 +90,8 @@
 
   #fileUploadContainer, #reportContainer {
     background-color: var(--element-bg-light);
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 15px; /* Slightly more rounded */
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12); /* Slightly stronger shadow */
     padding: 30px;
     margin-bottom: 30px;
     width: 100%;
@@ -144,7 +146,7 @@
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     background-color: var(--element-bg-light);
   }
-  .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange, .flatpickr-day.selected.inRange, .flatpickr-day.startRange.inRange, .flatpickr-day.endRange.inRange, .flatpickr-day.selected:focus, .flatpickr-day.startRange:focus, .flatpickr-day.endRange:focus, .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover {
+  .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange, .flatpickr-day.selected.inRange, .flatpickr-day.startRange.inRange, .flatpickr-day.inRange, .flatpickr-day.endRange.inRange, .flatpickr-day.selected:focus, .flatpickr-day.startRange:focus, .flatpickr-day.endRange:focus, .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover {
     background-color: var(--accent-primary) !important;
     border-color: var(--accent-primary) !important;
     color: var(--text-light) !important;
@@ -312,6 +314,18 @@
     color: rgba(0, 0, 0, 0.6);
   }
 
+  /* Section titles */
+  .section-title {
+    font-size: 1.5em;
+    color: var(--oxford-blue);
+    margin-bottom: 20px;
+    margin-top: 35px;
+    border-bottom: 2px solid var(--silver-lake-blue);
+    padding-bottom: 8px;
+    font-weight: 500;
+  }
+
+
   .kpiContainer {
     display: flex;
     justify-content: space-around;
@@ -333,13 +347,13 @@
 
   /* Specific background colors for each KPI box */
   .kpiBox.kpiReach {
-    background-color: rgba(var(--oxford-blue-rgb), 1); /* 100% opacity */
+    background-color: var(--oxford-blue); /* Solid dark blue */
   }
   .kpiBox.kpiImpressions {
-    background-color: rgba(var(--oxford-blue-rgb), 0.8); /* 80% opacity */
+    background-color: #dd3333; /* Explicit red */
   }
   .kpiBox.kpiClicks {
-    background-color: rgba(var(--oxford-blue-rgb), 0.6); /* 60% opacity */
+    background-color: var(--yinmn-blue); /* Solid medium blue-grey */
   }
 
   .kpiBox h3 {
@@ -461,6 +475,15 @@
     transform: translateY(-2px);
   }
 
+  .report-footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 0.85em;
+  }
+
   /* Responsive adjustments */
   @media (max-width: 768px) {
     .input-group {
@@ -545,6 +568,7 @@
     </div>
   </div>
 
+  <h2 class="section-title">Key Performance Indicators</h2>
   <div class="kpiContainer">
     <div class="kpiBox kpiReach">
       <h3 id="totalReach">0</h3>
@@ -565,6 +589,7 @@
     <span class="summary-impressions">0</span> impressions generating <span class="summary-clicks">0</span> clicks. This demonstrates strong audience engagement and effective ad delivery.
   </p>
 
+  <h2 class="section-title">Daily Performance Breakdown</h2>
   <table>
     <thead>
       <tr>
@@ -580,11 +605,16 @@
       </tbody>
   </table>
 
+  <h2 class="section-title">Daily Trend Analysis</h2>
   <div id="chartContainer">
     <canvas id="reportChart" height="180"></canvas>
   </div>
 
   <button id="downloadPdfBtn">Download Report as PDF</button>
+
+  <div class="report-footer">
+      &copy; <span id="copyrightYear"></span> <span id="footerClientName"></span>. All rights reserved.
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
@@ -620,6 +650,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const displayCampaignName = document.getElementById('displayCampaignName');
   const displayReportingPeriod = document.getElementById('displayReportingPeriod');
 
+  // Footer elements
+  const copyrightYearElem = document.getElementById('copyrightYear');
+  const footerClientNameElem = document.getElementById('footerClientName');
+
   let reportChart;
 
   // Initialize Flatpickr for the date input
@@ -639,9 +673,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Set current date
   currentDateElem.textContent = new Date().toISOString().slice(0, 10);
+  copyrightYearElem.textContent = new Date().getFullYear();
 
   // Event listeners for text inputs to enable/disable button
-  clientInput.addEventListener('input', checkInputs);
+  clientInput.addEventListener('input', () => {
+    checkInputs();
+    footerClientNameElem.textContent = clientInput.value.trim();
+  });
   campaignInput.addEventListener('input', checkInputs);
   runningDateInput.addEventListener('input', checkInputs);
 
@@ -814,6 +852,7 @@ document.addEventListener('DOMContentLoaded', () => {
     displayClientName.textContent = clientInput.value.trim() || 'N/A';
     displayCampaignName.textContent = campaignInput.value.trim() || 'N/A';
     displayReportingPeriod.textContent = runningDateInput.value.trim() || `${dates[0] || 'N/A'} to ${dates[dates.length - 1] || 'N/A'}`;
+    footerClientNameElem.textContent = clientInput.value.trim() || 'Your Company';
 
 
     // Render Chart with daily data
@@ -882,8 +921,8 @@ document.addEventListener('DOMContentLoaded', () => {
           {
             label: 'Daily Reach',
             data: dailyReachData,
-            // Removed borderColor and backgroundColor to use Chart.js defaults
-            borderWidth: 2, // Keep heavy stroke
+            // Using Chart.js original colors
+            borderWidth: 2,
             datalabels: {
               display: true,
               color: richBlack,
@@ -898,24 +937,8 @@ document.addEventListener('DOMContentLoaded', () => {
           {
             label: 'Daily Impressions',
             data: dailyImpressionsData,
-            // Removed borderColor and backgroundColor to use Chart.js defaults
-            borderWidth: 2, // Keep heavy stroke
-            datalabels: {
-              display: true,
-              color: richBlack,
-              anchor: 'end',
-              align: 'top',
-              font: { weight: '400', size: 12 },
-              formatter: function(value) {
-                return value.toLocaleString();
-              }
-            }
-          },
-          {
-            label: 'Daily Clicks',
-            data: dailyClicksData,
-            // Removed borderColor and backgroundColor to use Chart.js defaults
-            borderWidth: 2, // Keep heavy stroke
+            // Using Chart.js original colors
+            borderWidth: 2,
             datalabels: {
               display: true,
               color: richBlack,
@@ -927,6 +950,7 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             }
           }
+          // Removed 'Daily Clicks' dataset as requested
         ]
       },
       options: {
@@ -968,6 +992,19 @@ document.addEventListener('DOMContentLoaded', () => {
             bodyColor: richBlack,
             borderColor: 'var(--border-color)',
             borderWidth: 1
+          },
+          title: { /* Added Chart Title */
+            display: true,
+            text: 'Daily Reach and Impressions', /* Updated title */
+            color: richBlack,
+            font: {
+              size: 16,
+              weight: '500'
+            },
+            padding: {
+              top: 10,
+              bottom: 20
+            }
           }
         }
       },
@@ -1022,6 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initial check on load
   checkInputs();
+  footerClientNameElem.textContent = clientInput.value.trim() || 'Your Company'; // Set initial footer client name
 });
 </script>
 
