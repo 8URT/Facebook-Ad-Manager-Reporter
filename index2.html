@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Facebook Ads Report Generator</title>
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<style>
+  /* CSS Variables for the Light Theme (Updated with new palette) */
+  :root {
+    --rich-black: #0D1B2A; /* Reintroduced rich-black */
+    --oxford-blue: #1b263bff;
+    --yinmn-blue: #415a77ff;
+    --silver-lake-blue: #778da9ff;
+    --platinum: #e0e1ddff;
+
+    --background-light: var(--platinum);
+    --text-dark: var(--rich-black); /* Using rich-black for dark text */
+    --text-light: #ffffff;
+    --accent-primary: var(--oxford-blue);
+    --accent-secondary: var(--yinmn-blue);
+    --element-bg-light: #ffffff;
+    --table-header-bg: var(--oxford-blue);
+    --border-color: rgba(0, 0, 0, 0.1);
+    --input-placeholder-color: var(--silver-lake-blue);
+
+    /* New colors for specific elements */
+    --report-title-color: var(--oxford-blue);
+    --report-subtitle-color: var(--yinmn-blue);
+    --button-hover-color: var(--yinmn-blue); /* Changed to yinmn-blue */
+    --danger-color: #ae2012;
+    --danger-hover-color: #9b2226;
+
+    /* RGB values for Chart.js and dynamic styling */
+    --oxford-blue-rgb: 27, 38, 59;
+    --yinmn-blue-rgb: 65, 90, 119;
+    --silver-lake-blue-rgb: 119, 141, 169;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background-color: var(--background-light);
+    color: var(--text-dark);
+    margin: 0;
+    padding: 20px;
+    line-height: 1.4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    box-sizing: border-box;
+    font-size: 1.05em;
+    font-weight: 400;
+  }
+
+  h1, h2, h3, p {
+    color: var(--text-dark);
+    margin-top: 0;
+    font-weight: 400;
+  }
+
+  #fileUploadContainer, #reportContainer {
+    background-color: var(--element-bg-light);
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    margin-bottom: 30px;
+    width: 100%;
+    max-width: 900px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+  }
+
+  /* Input Group Styling for Client/Campaign/Date */
+  .input-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+
+  .text-input-label {
+    flex-shrink: 0;
+    width: 120px;
+    font-size: 1.0em;
+    color: var(--text-dark);
+    text-align: right;
+  }
+
+  .text-input-field {
+    flex-grow: 1;
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-size: 1.0em;
+    color: var(--text-dark);
+    transition: all 0.3s ease;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    outline: none;
+  }
+
+  .text-input-field::placeholder {
+    color: var(--input-placeholder-color);
+    opacity: 1;
+  }
+
+  .text-input-field:focus {
+    border-color: var(--accent-primary);
+    box-shadow: inset 0 1px 5px rgba(0,0,0,0.2), 0 0 8px rgba(var(--oxford-blue-rgb), 0.2);
+  }
+
+  /* Flatpickr overrides for better theme integration */
+  .flatpickr-calendar {
+    font-family: 'DM Sans', sans-serif;
+    border: 1:px solid var(--border-color);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    background-color: var(--element-bg-light);
+  }
+  .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange, .flatpickr-day.selected.inRange, .flatpickr-day.startRange.inRange, .flatpickr-day.endRange.inRange, .flatpickr-day.selected:focus, .flatpickr-day.startRange:focus, .flatpickr-day.endRange:focus, .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover {
+    background-color: var(--accent-primary) !important;
+    border-color: var(--accent-primary) !important;
+    color: var(--text-light) !important;
+  }
+  .flatpickr-day.inRange {
+    background-color: rgba(var(--oxford-blue-rgb), 0.1) !important;
+    border-color: rgba(var(--oxford-blue-rgb), 0.1) !important;
+    color: var(--text-dark);
+  }
+  .flatpickr-current-month .flatpickr-monthTitle, .flatpickr-current-month .flatpickr-year {
+    color: var(--text-dark);
+  }
+  .flatpickr-weekdays {
+    background-color: var(--table-header-bg);
+  }
+  .flatpickr-weekday {
+    color: var(--text-light);
+  }
+  .flatpickr-months .flatpickr-prev-month, .flatpickr-months .flatpickr-next-month {
+    color: var(--accent-primary);
+  }
+
+
+  /* File Input Specific Styling */
+  .file-input-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    margin-top: 25px;
+  }
+
+  .file-input-label {
+    display: flex;
+    flex-grow: 1;
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 18px;
+    cursor: pointer;
+    font-size: 1.0em;
+    color: var(--input-placeholder-color);
+    transition: all 0.3s ease;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    align-items: center;
+  }
+
+  .file-input-label:hover {
+    border-color: var(--accent-primary);
+    box-shadow: inset 0 1px 5px rgba(0,0,0,0.2), 0 0 8px rgba(var(--oxford-blue-rgb), 0.2);
+  }
+
+  .file-input-label::before {
+    content: 'Upload JSON File';
+    flex-grow: 1;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .file-input-label.has-file::before {
+      content: attr(data-filename);
+      color: var(--text-dark);
+  }
+
+  #jsonFileInput {
+    display: none;
+  }
+
+  #generateReportBtn {
+    padding: 12px 25px;
+    background-color: var(--accent-primary);
+    color: var(--text-light);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.0em;
+    font-weight: 500;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  }
+
+  #generateReportBtn:disabled {
+    background-color: var(--silver-lake-blue);
+    cursor: not-allowed;
+    opacity: 0.7;
+    box-shadow: none;
+  }
+
+  #generateReportBtn:not(:disabled):hover {
+    background-color: var(--button-hover-color);
+    transform: translateY(-2px);
+  }
+
+  .error-message {
+    color: var(--danger-color);
+    text-align: center;
+    margin-top: 10px;
+    font-weight: 500;
+  }
+
+  #reportContainer {
+    display: none;
+  }
+
+  #reportHeader {
+    margin-bottom: 25px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 20px;
+    /* Updated for layout without absolute positioning for date */
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  #reportHeader-left {
+    flex-grow: 1;
+    text-align: left;
+  }
+
+  #reportHeader-right {
+    flex-shrink: 0; /* Prevent it from shrinking */
+    text-align: right; /* Align content to the right */
+    padding-left: 20px; /* Add some space between left and right */
+  }
+
+  #logo {
+    max-width: 250px; /* Bigger logo */
+    height: auto;
+    margin-bottom: 15px;
+    display: block;
+  }
+
+  #reportHeader h1 {
+    color: var(--report-title-color);
+    font-size: 2.0em; /* Reduced size */
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+
+  #reportHeader h2 {
+    color: var(--report-subtitle-color);
+    font-size: 1.2em;
+    margin-bottom: 8px;
+    font-weight: 400;
+  }
+
+  #reportHeader p {
+    font-size: 1.2em;
+    margin-bottom: 5px;
+    color: var(--report-subtitle-color);
+    font-weight: 400;
+  }
+
+  .header-value {
+    color: var(--report-subtitle-color);
+    font-weight: 400;
+  }
+
+  #dateIssued {
+    font-size: 0.9em;
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  .kpiContainer {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .kpiBox {
+    /* Base styles for KPI box */
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    flex: 1;
+    min-width: 200px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+  }
+
+  /* Specific background colors for each KPI box */
+  .kpiBox.kpiReach {
+    background-color: rgba(var(--oxford-blue-rgb), 1); /* 100% opacity */
+  }
+  .kpiBox.kpiImpressions {
+    background-color: rgba(var(--oxford-blue-rgb), 0.8); /* 80% opacity */
+  }
+  .kpiBox.kpiClicks {
+    background-color: rgba(var(--oxford-blue-rgb), 0.6); /* 60% opacity */
+  }
+
+  .kpiBox h3 {
+    font-size: 2.5em;
+    color: var(--text-light); /* White font for KPI values */
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+
+  .kpiBox p {
+    font-size: 1.0em;
+    color: var(--text-light); /* White font for KPI labels */
+    font-weight: 400;
+  }
+
+  .summary {
+    background-color: var(--element-bg-light);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    font-size: 1.0em;
+    color: var(--text-dark);
+    text-align: justify;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .summary span {
+    font-weight: 400;
+    color: var(--report-subtitle-color);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+    font-size: 0.9em;
+    background-color: var(--element-bg-light);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  table thead th {
+    background-color: var(--table-header-bg);
+    color: var(--text-light);
+    padding: 15px;
+    text-align: left;
+    font-weight: 400;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  table tbody td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-dark);
+  }
+
+  table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  table tbody tr:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.03);
+  }
+
+  .total-row {
+    font-weight: 400;
+    background-color: var(--silver-lake-blue);
+    color: var(--rich-black); /* Using rich-black for total row text */
+  }
+
+  /* Heatmap styling for table cells - applied dynamically by JS */
+  .heatmap-cell {
+    transition: background-color 0.5s ease;
+  }
+
+  #chartContainer {
+    background-color: var(--element-bg-light);
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color);
+    position: relative;
+    height: 400px;
+  }
+
+  #reportChart {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  #downloadPdfBtn {
+    display: block;
+    width: fit-content;
+    margin: 0 auto;
+    padding: 15px 30px;
+    background-color: var(--danger-color);
+    color: var(--text-light);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.0em;
+    font-weight: 500;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  }
+
+  #downloadPdfBtn:disabled {
+    background-color: var(--silver-lake-blue);
+    cursor: not-allowed;
+    opacity: 0.7;
+    box-shadow: none;
+  }
+
+  #downloadPdfBtn:not(:disabled):hover {
+    background-color: var(--danger-hover-color);
+    transform: translateY(-2px);
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .input-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .text-input-label {
+        text-align: left;
+        width: auto;
+    }
+    #reportHeader {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    #reportHeader-left {
+        text-align: center;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    #reportHeader-right {
+        padding-left: 0; /* Remove padding for smaller screens */
+        text-align: center; /* Center align for smaller screens */
+        width: 100%; /* Take full width */
+    }
+    .kpiContainer {
+      flex-direction: column;
+      align-items: center;
+    }
+    .kpiBox {
+      width: 80%;
+      min-width: unset;
+    }
+    table {
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    #chartContainer {
+      height: 300px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="fileUploadContainer">
+  <div class="input-group">
+    <label for="clientInput" class="text-input-label">Client Name:</label>
+    <input type="text" id="clientInput" class="text-input-field" placeholder="e.g., Lottotech" value="Lotto"/>
+  </div>
+  <div class="input-group">
+    <label for="campaignInput" class="text-input-label">Campaign Name:</label>
+    <input type="text" id="campaignInput" class="text-input-field" placeholder="e.g., Video 1" value="cceee"/>
+  </div>
+  <div class="input-group">
+    <label for="runningDateInput" class="text-input-label">Reporting Period:</label>
+    <input type="text" id="runningDateInput" class="text-input-field" placeholder="e.g., 2025-05-01 to 2025-05-31" value="2025-07-10 to 2025-07-15"/>
+  </div>
+
+  <div class="file-input-wrapper">
+    <label for="jsonFileInput" class="file-input-label" id="fileInputLabel">
+      </label>
+    <input type="file" id="jsonFileInput" accept=".json" />
+    <button id="generateReportBtn" disabled>Generate Report</button>
+  </div>
+  <div id="fileError" class="error-message"></div>
+</div>
+
+<div id="reportContainer" style="display: none;">
+  <div id="reportHeader">
+    <div id="reportHeader-left">
+        <img id="logo" src="Le_Mauricien_com@HD.png" alt="Le Mauricien Logo" />
+        <h1>Facebook Ads Report</h1>
+        <h2>Client: <span id="displayClientName" class="header-value"></span></h2>
+        <p><strong>Campaign:</strong> <span id="displayCampaignName" class="header-value"></span></p>
+        <p><strong>Reporting Period:</strong> <span id="displayReportingPeriod" class="header-value"></span></p>
+    </div>
+    <div id="reportHeader-right">
+        <div id="dateIssued">Date of Issue: <span id="currentDate"></span></div>
+    </div>
+  </div>
+
+  <div class="kpiContainer">
+    <div class="kpiBox kpiReach">
+      <h3 id="totalReach">0</h3>
+      <p>Accounts Reach</p>
+    </div>
+    <div class="kpiBox kpiImpressions">
+      <h3 id="totalImpressions">0</h3>
+      <p>Impressions</p>
+    </div>
+    <div class="kpiBox kpiClicks">
+      <h3 id="totalClicks">0</h3>
+      <p>Clicks</p>
+    </div>
+  </div>
+
+  <p class="summary">
+    Over the campaign period, the Facebook ads reached a total of <span class="summary-reach">0</span> unique accounts with
+    <span class="summary-impressions">0</span> impressions generating <span class="summary-clicks">0</span> clicks. This demonstrates strong audience engagement and effective ad delivery.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Impressions</th>
+        <th>Reach</th>
+        <th>CTR (all) %</th>
+        <th>Clicks</th>
+        <th>Page Engagement</th>
+      </tr>
+    </thead>
+    <tbody id="reportTableBody">
+      </tbody>
+  </table>
+
+  <div id="chartContainer">
+    <canvas id="reportChart" height="180"></canvas>
+  </div>
+
+  <button id="downloadPdfBtn">Download Report as PDF</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const jsonFileInput = document.getElementById('jsonFileInput');
+  const fileInputLabel = document.getElementById('fileInputLabel');
+  const generateReportBtn = document.getElementById('generateReportBtn');
+  const fileError = document.getElementById('fileError');
+  const reportContainer = document.getElementById('reportContainer');
+  const reportTableBody = document.getElementById('reportTableBody');
+  const totalReachElem = document.getElementById('totalReach');
+  const totalImpressionsElem = document.getElementById('totalImpressions');
+  const totalClicksElem = document.getElementById('totalClicks');
+  const summaryReachElem = document.querySelector('.summary-reach');
+  const summaryImpressionsElem = document.querySelector('.summary-impressions');
+  const summaryClicksElem = document.querySelector('.summary-clicks');
+  const currentDateElem = document.getElementById('currentDate');
+  const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+
+  // Input elements for Client, Campaign, Running Date
+  const clientInput = document.getElementById('clientInput');
+  const campaignInput = document.getElementById('campaignInput');
+  const runningDateInput = document.getElementById('runningDateInput');
+
+  // Display elements in the report header
+  const displayClientName = document.getElementById('displayClientName');
+  const displayCampaignName = document.getElementById('displayCampaignName');
+  const displayReportingPeriod = document.getElementById('displayReportingPeriod');
+
+  let reportChart;
+
+  // Initialize Flatpickr for the date input
+  flatpickr("#runningDateInput", {
+    dateFormat: "Y-m-d",
+    mode: "range"
+  });
+
+
+  // Function to check if inputs are valid for enabling the button
+  function checkInputs() {
+    const isFileSelected = jsonFileInput.files.length > 0;
+    const isClientNameFilled = clientInput.value.trim() !== '';
+    const isCampaignNameFilled = campaignInput.value.trim() !== '';
+    generateReportBtn.disabled = !(isFileSelected && isClientNameFilled && isCampaignNameFilled);
+  }
+
+  // Set current date
+  currentDateElem.textContent = new Date().toISOString().slice(0, 10);
+
+  // Event listeners for text inputs to enable/disable button
+  clientInput.addEventListener('input', checkInputs);
+  campaignInput.addEventListener('input', checkInputs);
+  runningDateInput.addEventListener('input', checkInputs);
+
+  // Handle file input changes for the custom label and button state
+  jsonFileInput.addEventListener('change', () => {
+    if (jsonFileInput.files.length > 0) {
+      const fileName = jsonFileInput.files[0].name;
+      fileInputLabel.textContent = fileName;
+      fileInputLabel.setAttribute('data-filename', fileName);
+      fileInputLabel.classList.add('has-file');
+      fileError.textContent = '';
+    } else {
+      fileInputLabel.textContent = '';
+      fileInputLabel.removeAttribute('data-filename');
+      fileInputLabel.classList.remove('has-file');
+    }
+    checkInputs();
+  });
+
+
+  generateReportBtn.addEventListener('click', () => {
+    const file = jsonFileInput.files[0];
+    if (file) {
+      parseJSON(file);
+    } else {
+      fileError.textContent = 'Please select a JSON file to upload.';
+    }
+  });
+
+  downloadPdfBtn.addEventListener('click', generatePdf);
+
+  function parseJSON(file) {
+    const reader = new FileReader();
+
+    reader.onload = function(event) {
+      try {
+        const jsonString = event.target.result;
+        const data = JSON.parse(jsonString);
+
+        if (!Array.isArray(data) || data.length === 0) {
+          fileError.textContent = 'JSON file is empty or does not contain a valid array of data.';
+          reportContainer.style.display = 'none';
+          return;
+        }
+
+        const requiredHeaders = ["Reporting starts", "Reporting ends", "Impressions", "Reach", "Clicks (all)", "CTR (all)", "Page engagement"];
+        const actualHeaders = Object.keys(data[0]);
+        const missingHeaders = requiredHeaders.filter(header => !actualHeaders.includes(header));
+
+        if (missingHeaders.length > 0) {
+          fileError.textContent = `Missing required JSON keys: ${missingHeaders.join(', ')}. Please ensure your JSON has these exact keys.`;
+          reportContainer.style.display = 'none';
+          return;
+        }
+
+        renderReport(data);
+        reportContainer.style.display = 'block';
+        fileError.textContent = '';
+
+      } catch (e) {
+        fileError.textContent = 'Error parsing JSON file: ' + e.message;
+        reportContainer.style.display = 'none';
+      }
+    };
+
+    reader.onerror = function(event) {
+      fileError.textContent = 'Failed to read JSON file: ' + event.target.error;
+      reportContainer.style.display = 'none';
+    };
+
+    reader.readAsText(file);
+  }
+
+  function getMinMaxValues(data, columns) {
+      const minMax = {};
+      columns.forEach(col => {
+          let values = data.map(row => parseFloat(row[col]) || 0);
+          values = values.filter(val => !isNaN(val));
+          minMax[col] = {
+              min: values.length > 0 ? Math.min(...values) : 0,
+              max: values.length > 0 ? Math.max(...values) : 0
+          };
+      });
+      return minMax;
+  }
+
+  function renderReport(data) {
+    reportTableBody.innerHTML = '';
+
+    // Sort data by 'Reporting starts' date
+    data.sort((a, b) => {
+        const dateA = new Date(a['Reporting starts']);
+        const dateB = new Date(b['Reporting starts']);
+        return dateA - dateB;
+    });
+
+    let totalImpressions = 0;
+    let totalReach = 0;
+    let totalClicks = 0;
+    let totalPageEngagement = 0;
+
+    const dates = [];
+    let cumulativeImpressions = 0;
+    let cumulativeReach = 0;
+    let cumulativeClicks = 0;
+
+    const cumulativeImpressionsData = [];
+    const cumulativeReachData = [];
+    const cumulativeClicksData = [];
+
+    const numericColumnsForHeatmap = ["Impressions", "Reach", "Clicks (all)", "Page engagement"];
+    const minMaxValues = getMinMaxValues(data, numericColumnsForHeatmap);
+
+    // Populate table and collect chart data
+    data.forEach(row => {
+      const startDate = row['Reporting starts'];
+      const impressions = parseInt(row['Impressions']) || 0;
+      const reach = parseInt(row['Reach']) || 0;
+      const clicks = parseInt(row['Clicks (all)']) || 0;
+      const ctr = parseFloat(row['CTR (all)']) || 0;
+      const pageEngagement = parseInt(row['Page engagement']) || 0;
+
+      totalImpressions += impressions;
+      totalReach += reach;
+      totalClicks += clicks;
+      totalPageEngagement += pageEngagement;
+
+      dates.push(startDate);
+      cumulativeImpressions += impressions;
+      cumulativeReach += reach;
+      cumulativeClicks += clicks;
+
+      cumulativeImpressionsData.push(cumulativeImpressions);
+      cumulativeReachData.push(cumulativeReach);
+      cumulativeClicksData.push(cumulativeClicks);
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="data-cell">${startDate}</td>
+        <td class="data-cell impressions-cell">${impressions.toLocaleString()}</td>
+        <td class="data-cell reach-cell">${reach.toLocaleString()}</td>
+        <td class="data-cell">${ctr.toFixed(2)}</td>
+        <td class="data-cell clicks-cell">${clicks.toLocaleString()}</td>
+        <td class="data-cell page-engagement-cell">${pageEngagement.toLocaleString()}</td>
+      `;
+      reportTableBody.appendChild(tr);
+    });
+
+    // Apply heatmap styling
+    applyHeatmap(reportTableBody, data, minMaxValues);
+
+    // Add total row
+    const totalRow = document.createElement('tr');
+    totalRow.classList.add('total-row');
+    totalRow.innerHTML = `
+      <td>Total</td>
+      <td>${totalImpressions.toLocaleString()}</td>
+      <td>${totalReach.toLocaleString()}</td>
+      <td>-</td>
+      <td>${totalClicks.toLocaleString()}</td>
+      <td>${totalPageEngagement.toLocaleString()}</td>
+    `;
+    reportTableBody.appendChild(totalRow);
+
+    // Update KPIs
+    totalReachElem.textContent = totalReach.toLocaleString();
+    totalImpressionsElem.textContent = totalImpressions.toLocaleString();
+    totalClicksElem.textContent = totalClicks.toLocaleString();
+
+    // Update summary paragraph
+    summaryReachElem.textContent = totalReach.toLocaleString();
+    summaryImpressionsElem.textContent = totalImpressions.toLocaleString();
+    summaryClicksElem.textContent = totalClicks.toLocaleString();
+
+    // Set values from input fields to report header
+    displayClientName.textContent = clientInput.value.trim() || 'N/A';
+    displayCampaignName.textContent = campaignInput.value.trim() || 'N/A';
+    displayReportingPeriod.textContent = runningDateInput.value.trim() || `${dates[0] || 'N/A'} to ${dates[dates.length - 1] || 'N/A'}`;
+
+
+    // Render Chart with cumulative data
+    renderChart(dates, cumulativeReachData, cumulativeImpressionsData, cumulativeClicksData);
+  }
+
+  function applyHeatmap(tableBody, data, minMaxValues) {
+      const rows = tableBody.querySelectorAll('tr');
+      const numericColumnIndices = {
+          'impressions-cell': 'Impressions',
+          'reach-cell': 'Reach',
+          'clicks-cell': 'Clicks (all)',
+          'page-engagement-cell': 'Page engagement'
+      };
+
+      rows.forEach((row, rowIndex) => {
+          if (row.classList.contains('total-row')) return;
+
+          const cells = row.querySelectorAll('.data-cell');
+          cells.forEach(cell => {
+              for (const className in numericColumnIndices) {
+                  if (cell.classList.contains(className)) {
+                      const columnName = numericColumnIndices[className];
+                      const value = parseFloat(data[rowIndex][columnName]) || 0;
+                      const min = minMaxValues[columnName].min;
+                      const max = minMaxValues[columnName].max;
+
+                      if (max > min) {
+                          // Blend between silver-lake-blue and yinmn-blue for heatmap
+                          const r1 = 119, g1 = 141, b1 = 169; // silver-lake-blue (approx RGB)
+                          const r2 = 65, g2 = 90, b2 = 119;   // yinmn-blue (approx RGB)
+
+                          const ratio = (value - min) / (max - min);
+                          const r = Math.round(r1 + (r2 - r1) * ratio);
+                          const g = Math.round(g1 + (g2 - g1) * ratio);
+                          const b = Math.round(b1 + (b2 - b1) * ratio);
+
+                          cell.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.5)`; /* Increased opacity for more contrast */
+                      } else {
+                          cell.style.backgroundColor = `rgba(119, 141, 169, 0.2)`; /* Increased opacity for base if all values are same */
+                      }
+                      break;
+                  }
+              }
+          });
+      });
+  }
+
+
+  function renderChart(dates, cumulativeReachData, cumulativeImpressionsData, cumulativeClicksData) {
+    if (reportChart) {
+      reportChart.destroy();
+    }
+
+    // Get CSS variable values for chart colors
+    const style = getComputedStyle(document.documentElement);
+    const oxfordBlue = style.getPropertyValue('--oxford-blue');
+    const yinmnBlue = style.getPropertyValue('--yinmn-blue');
+    const silverLakeBlue = style.getPropertyValue('--silver-lake-blue');
+    const platinum = style.getPropertyValue('--platinum');
+    const richBlack = style.getPropertyValue('--rich-black'); /* Get rich-black */
+
+    const oxfordBlueRgb = style.getPropertyValue('--oxford-blue-rgb');
+    const yinmnBlueRgb = style.getPropertyValue('--yinmn-blue-rgb');
+    const silverLakeBlueRgb = style.getPropertyValue('--silver-lake-blue-rgb');
+
+
+    const ctx = document.getElementById('reportChart').getContext('2d');
+
+    reportChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [
+          {
+            label: 'Cumulative Reach',
+            data: cumulativeReachData,
+            fill: true,
+            tension: 0.3,
+            borderColor: oxfordBlue,
+            backgroundColor: `rgba(${oxfordBlueRgb}, 0.2)`,
+            pointRadius: 4,
+            pointBackgroundColor: platinum,
+            pointBorderColor: oxfordBlue,
+            datalabels: {
+              display: true,
+              color: richBlack, /* Use rich-black */
+              anchor: 'end',
+              align: 'top',
+              font: { weight: '400', size: 12 },
+              formatter: function(value) {
+                return value.toLocaleString();
+              }
+            }
+          },
+          {
+            label: 'Cumulative Impressions',
+            data: cumulativeImpressionsData,
+            fill: true,
+            tension: 0.3,
+            borderColor: yinmnBlue,
+            backgroundColor: `rgba(${yinmnBlueRgb}, 0.2)`,
+            pointRadius: 4,
+            pointBackgroundColor: platinum,
+            pointBorderColor: yinmnBlue,
+            datalabels: {
+              display: true,
+              color: richBlack, /* Use rich-black */
+              anchor: 'end',
+              align: 'top',
+              font: { weight: '400', size: 12 },
+              formatter: function(value) {
+                return value.toLocaleString();
+              }
+            }
+          },
+          {
+            label: 'Cumulative Clicks',
+            data: cumulativeClicksData,
+            fill: true,
+            tension: 0.3,
+            borderColor: silverLakeBlue,
+            backgroundColor: `rgba(${silverLakeBlueRgb}, 0.2)`,
+            pointRadius: 4,
+            pointBackgroundColor: platinum,
+            pointBorderColor: silverLakeBlue,
+            datalabels: {
+              display: true,
+              color: richBlack, /* Use rich-black */
+              anchor: 'end',
+              align: 'top',
+              font: { weight: '400', size: 12 },
+              formatter: function(value) {
+                return value.toLocaleString();
+              }
+            }
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: {
+              color: richBlack, /* Use rich-black */
+              callback: function(value) {
+                  return value.toLocaleString();
+              }
+            }
+          },
+          x: {
+            grid: { display: false },
+            ticks: {
+              color: richBlack /* Use rich-black */
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              font: { weight: '500', size: 14 },
+              color: richBlack /* Use rich-black */
+            }
+          },
+          datalabels: {
+            display: true
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: 'var(--element-bg-light)',
+            titleColor: oxfordBlue,
+            bodyColor: richBlack, /* Use rich-black */
+            borderColor: 'var(--border-color)',
+            borderWidth: 1
+          }
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
+  }
+
+  async function generatePdf() {
+    downloadPdfBtn.textContent = 'Generating PDF...';
+    downloadPdfBtn.disabled = true;
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'pt', 'a4');
+
+    const reportElement = document.getElementById('reportContainer');
+
+    const originalBodyBg = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = 'white';
+
+    await html2canvas(reportElement, {
+      scale: 2,
+      useCORS: true,
+      windowWidth: reportElement.scrollWidth,
+      windowHeight: reportElement.scrollHeight,
+      backgroundColor: getComputedStyle(reportElement).backgroundColor
+    }).then(canvas => {
+      document.body.style.backgroundColor = originalBodyBg;
+
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 595.28;
+      const pageHeight = 841.89;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        doc.addPage();
+        doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      doc.save('facebook_ads_report.pdf');
+
+      downloadPdfBtn.textContent = 'Download Report as PDF';
+      downloadPdfBtn.disabled = false;
+    });
+  }
+
+  // Initial check on load
+  checkInputs();
+});
+</script>
+
+</body>
+</html>
