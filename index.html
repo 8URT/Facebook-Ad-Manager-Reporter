@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Facebook Ads Report Generator</title>
+
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="fileUploadContainer">
+  <h1>Generate Your Ads Report</h1>
+  <p>Upload a CSV file containing your ad performance data to create a dynamic report.</p>
+  <input type="file" id="csvFileInput" accept=".csv" />
+  <button id="generateReportBtn" disabled>Generate Report</button>
+  <div id="fileError" class="error-message"></div>
+</div>
+
+<div id="reportContainer" style="display: none;">
+  <div id="reportHeader">
+    <div id="dateIssued">Date of Issue: <span id="currentDate"></span></div>
+    <img id="logo" src="Le_Mauricien_com@HD.png" alt="Le Mauricien Logo" />
+    <h1>Facebook Ads Report</h1>
+    <h2 id="clientName">Client: <span contenteditable="true">Associated Textile</span></h2>
+    <p><strong>Campaign:</strong> <span id="campaignName" contenteditable="true">🎉 ELLE EST DE RETOUR… ET PLUS SPECTACULAIRE QUE...</span></p>
+    <p><strong>Reporting Period:</strong> <span id="reportingPeriod" contenteditable="true"></span></p>
+  </div>
+
+  <div id="kpiContainer">
+    <div class="kpiBox kpiReach">
+      <h3 id="totalReach">0</h3>
+      <p>Accounts Reach</p>
+    </div>
+    <div class="kpiBox kpiImpressions">
+      <h3 id="totalImpressions">0</h3>
+      <p>Impressions</p>
+    </div>
+    <div class="kpiBox kpiClicks">
+      <h3 id="totalClicks">0</h3>
+      <p>Clicks</p>
+    </div>
+  </div>
+
+  <p class="summary" contenteditable="true">
+    Over the campaign period, the Facebook ads reached a total of <span class="summary-reach">0</span> unique accounts with
+    <span class="summary-impressions">0</span> impressions generating <span class="summary-clicks">0</span> clicks. This demonstrates strong audience engagement and effective ad delivery.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Impressions</th>
+        <th>Reach</th>
+        <th>CTR (all) %</th>
+        <th>Clicks</th>
+        <th>Page Engagement</th>
+      </tr>
+    </thead>
+    <tbody id="reportTableBody">
+      </tbody>
+  </table>
+
+  <div id="chartContainer">
+    <canvas id="reportChart" height="180"></canvas>
+  </div>
+
+  <button id="downloadPdfBtn">Download Report as PDF</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
