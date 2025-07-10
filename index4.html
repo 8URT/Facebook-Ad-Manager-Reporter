@@ -610,6 +610,21 @@
     <canvas id="reportChart" height="180"></canvas>
   </div>
 
+  <h2 class="section-title">Audience Demographics Breakdown (Age & Gender)</h2>
+  <table id="genderAgeTable">
+    <thead>
+      <tr>
+        <th>Gender</th>
+        <th>Age Group</th>
+        <th>Total Impressions</th>
+        <th>Total Reach</th>
+        <th>Total Clicks</th>
+      </tr>
+    </thead>
+    <tbody id="genderAgeTableBody">
+      </tbody>
+  </table>
+
   <button id="downloadPdfBtn">Download Report as PDF</button>
 
   <div class="report-footer">
@@ -639,6 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const summaryClicksElem = document.querySelector('.summary-clicks');
   const currentDateElem = document.getElementById('currentDate');
   const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+  const genderAgeTableBody = document.getElementById('genderAgeTableBody'); // New table body element
 
   // Input elements for Client, Campaign, Running Date
   const clientInput = document.getElementById('clientInput');
@@ -661,7 +677,6 @@ document.addEventListener('DOMContentLoaded', () => {
     dateFormat: "Y-m-d",
     mode: "range"
   });
-
 
   // Function to check if inputs are valid for enabling the button
   function checkInputs() {
@@ -700,58 +715,78 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
-  generateReportBtn.addEventListener('click', () => {
+  generateReportBtn.addEventListener('click', async () => {
     const file = jsonFileInput.files[0];
-    if (file) {
-      parseJSON(file);
-    } else {
+    if (!file) {
       fileError.textContent = 'Please select a JSON file to upload.';
+      return;
+    }
+
+    try {
+      const mainAdsData = await parseJSONFile(file);
+      const genderAgeData = await fetchGenderAgeData();
+
+      if (mainAdsData && genderAgeData) {
+        renderReport(mainAdsData);
+        renderGenderAgeTable(genderAgeData);
+        reportContainer.style.display = 'block';
+        fileError.textContent = '';
+      } else {
+        fileError.textContent = 'Failed to load all required data files.';
+        reportContainer.style.display = 'none';
+      }
+    } catch (e) {
+      fileError.textContent = 'Error generating report: ' + e.message;
+      reportContainer.style.display = 'none';
     }
   });
 
   downloadPdfBtn.addEventListener('click', generatePdf);
 
-  function parseJSON(file) {
-    const reader = new FileReader();
+  function parseJSONFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const data = JSON.parse(event.target.result);
+          if (!Array.isArray(data) || data.length === 0) {
+            reject(new Error('JSON file is empty or does not contain a valid array of data.'));
+            return;
+          }
+          const requiredHeaders = ["Reporting starts", "Reporting ends", "Impressions", "Reach", "Clicks (all)", "CTR (all)", "Page engagement"];
+          const actualHeaders = Object.keys(data[0]);
+          const missingHeaders = requiredHeaders.filter(header => !actualHeaders.includes(header));
 
-    reader.onload = function(event) {
-      try {
-        const jsonString = event.target.result;
-        const data = JSON.parse(jsonString);
-
-        if (!Array.isArray(data) || data.length === 0) {
-          fileError.textContent = 'JSON file is empty or does not contain a valid array of data.';
-          reportContainer.style.display = 'none';
-          return;
+          if (missingHeaders.length > 0) {
+            reject(new Error(`Missing required JSON keys: ${missingHeaders.join(', ')}. Please ensure your JSON has these exact keys.`));
+            return;
+          }
+          resolve(data);
+        } catch (e) {
+          reject(new Error('Error parsing JSON file: ' + e.message));
         }
-
-        const requiredHeaders = ["Reporting starts", "Reporting ends", "Impressions", "Reach", "Clicks (all)", "CTR (all)", "Page engagement"];
-        const actualHeaders = Object.keys(data[0]);
-        const missingHeaders = requiredHeaders.filter(header => !actualHeaders.includes(header));
-
-        if (missingHeaders.length > 0) {
-          fileError.textContent = `Missing required JSON keys: ${missingHeaders.join(', ')}. Please ensure your JSON has these exact keys.`;
-          reportContainer.style.display = 'none';
-          return;
-        }
-
-        renderReport(data);
-        reportContainer.style.display = 'block';
-        fileError.textContent = '';
-
-      } catch (e) {
-        fileError.textContent = 'Error parsing JSON file: ' + e.message;
-        reportContainer.style.display = 'none';
-      }
-    };
-
-    reader.onerror = function(event) {
-      fileError.textContent = 'Failed to read JSON file: ' + event.target.error;
-      reportContainer.style.display = 'none';
-    };
-
-    reader.readAsText(file);
+      };
+      reader.onerror = function(event) {
+        reject(new Error('Failed to read JSON file: ' + event.target.error));
+      };
+      reader.readAsText(file);
+    });
   }
+
+  async function fetchGenderAgeData() {
+    try {
+      const response = await fetch('gender_age_data.json'); // Assuming this file is in the same directory
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (e) {
+      console.error('Error fetching gender_age_data.json:', e);
+      fileError.textContent = 'Could not load gender and age data. Make sure "gender_age_data.json" is in the same directory.';
+      return null;
+    }
+  }
+
 
   function getMinMaxValues(data, columns) {
       const minMax = {};
@@ -856,7 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Render Chart with daily data
-    renderChart(dates, dailyReachData, dailyImpressionsData, dailyClicksData);
+    renderChart(dates, dailyReachData, dailyImpressionsData); // Removed dailyClicksData from chart
   }
 
   function applyHeatmap(tableBody, data, minMaxValues) {
@@ -902,7 +937,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
-  function renderChart(dates, dailyReachData, dailyImpressionsData, dailyClicksData) {
+  function renderChart(dates, dailyReachData, dailyImpressionsData) { // Removed dailyClicksData parameter
     if (reportChart) {
       reportChart.destroy();
     }
@@ -1010,6 +1045,54 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       plugins: [ChartDataLabels]
     });
+  }
+
+  // New function to render Gender and Age table
+  function renderGenderAgeTable(data) {
+    genderAgeTableBody.innerHTML = ''; // Clear existing content
+
+    // Define the order of age groups for sorting
+    const ageOrder = ['13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
+
+    // Sort data by Gender (female, male, unknown) and then by Age Group
+    data.sort((a, b) => {
+        const genderOrder = ['female', 'male', 'unknown'];
+        const genderCompare = genderOrder.indexOf(a.Gender) - genderOrder.indexOf(b.Gender);
+        if (genderCompare !== 0) return genderCompare;
+
+        return ageOrder.indexOf(a.Age) - ageOrder.indexOf(b.Age);
+    });
+
+    let totalAgeGenderImpressions = 0;
+    let totalAgeGenderReach = 0;
+    let totalAgeGenderClicks = 0;
+
+    data.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${row.Gender}</td>
+        <td>${row.Age}</td>
+        <td>${row.Total_Impressions.toLocaleString()}</td>
+        <td>${row.Total_Reach.toLocaleString()}</td>
+        <td>${row.Total_Clicks.toLocaleString()}</td>
+      `;
+      genderAgeTableBody.appendChild(tr);
+
+      totalAgeGenderImpressions += row.Total_Impressions;
+      totalAgeGenderReach += row.Total_Reach;
+      totalAgeGenderClicks += row.Total_Clicks;
+    });
+
+    // Add a total row for Gender/Age table
+    const totalRow = document.createElement('tr');
+    totalRow.classList.add('total-row');
+    totalRow.innerHTML = `
+      <td colspan="2">Total</td>
+      <td>${totalAgeGenderImpressions.toLocaleString()}</td>
+      <td>${totalAgeGenderReach.toLocaleString()}</td>
+      <td>${totalAgeGenderClicks.toLocaleString()}</td>
+    `;
+    genderAgeTableBody.appendChild(totalRow);
   }
 
   async function generatePdf() {

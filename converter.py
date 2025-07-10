@@ -1,66 +1,43 @@
 import pandas as pd
 import json
-import os
-import numpy as np
 
-def csv_to_json(csv_filepath, json_filepath):
-    """
-    Converts a CSV file to a JSON file, explicitly replacing NaN values with None.
-    Each row in the CSV becomes an object in a JSON array.
-    """
-    print(f"DEBUG: Starting conversion for CSV: {csv_filepath}")
-    try:
-        # Read the CSV file into a pandas DataFrame
-        df = pd.read_csv(csv_filepath)
-        print(f"DEBUG: DataFrame loaded. Shape: {df.shape}")
-        print("DEBUG: Head of DataFrame before NaN replacement:")
-        print(df.head()) # Shows first few rows, including NaNs if present
+# Define the input CSV file path
+csv_file_path = 'Le-Mauricien-LTD-Ad-sets-Jun-10-2025-Jul-9-2025.csv'
+# Define the output JSON file path
+output_json_file_path = 'gender_age_data.json'
 
-        # --- WORKAROUND: Replace NaN values across the DataFrame with None manually ---
-        # This iterates through all columns and replaces NaN specifically.
-        # This bypasses the problematic df.fillna() method.
-        for column in df.columns:
-            # np.nan is the standard representation for missing numerical data in numpy/pandas
-            df[column] = df[column].replace({np.nan: None})
-        print("DEBUG: NaN values replaced with None using column-wise replace().")
-        print("DEBUG: Head of DataFrame AFTER NaN replacement:")
-        print(df.head()) # Check again to see if NaNs are gone (should be 'None' or empty)
+try:
+    # Load the CSV file
+    df_gender_age = pd.read_csv(csv_file_path)
 
-        # --- Specific Debugging Check for 'Post shares' column ---
-        if 'Post shares' in df.columns:
-            problem_row_index = 4 # Based on your previous JSON snippet
-            if problem_row_index < len(df):
-                print(f"DEBUG: Value in 'Post shares' for row {problem_row_index} AFTER replacement: {df.loc[problem_row_index, 'Post shares']}")
-                print(f"DEBUG: Type of value: {type(df.loc[problem_row_index, 'Post shares'])}")
-            else:
-                print(f"DEBUG: Row {problem_row_index} out of bounds for 'Post shares' check.")
-        else:
-            print("DEBUG: 'Post shares' column not found in DataFrame.")
-        # --- End Specific Debugging Check ---
+    # Group by 'Gender' and 'Age' and sum the relevant metrics
+    gender_age_summary = df_gender_age.groupby(['Gender', 'Age']).agg(
+        Total_Impressions=('Impressions', 'sum'),
+        Total_Reach=('Reach', 'sum'),
+        Total_Clicks=('Clicks (all)', 'sum')
+    ).reset_index()
 
-        # Convert the DataFrame to a list of dictionaries (JSON format)
-        json_data = df.to_dict(orient='records')
-        print(f"DEBUG: Converted DataFrame to list of {len(json_data)} dictionaries.")
+    # Define a custom order for Age groups for consistent sorting
+    age_order = ['13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+']
+    gender_age_summary['Age'] = pd.Categorical(gender_age_summary['Age'], categories=age_order, ordered=True)
 
-        # Write the JSON data to a file
-        with open(json_filepath, 'w', encoding='utf-8') as f:
-            json.dump(json_data, f, indent=4, ensure_ascii=False)
-        print(f"DEBUG: JSON data written to '{json_filepath}'")
-        print(f"Successfully converted '{csv_filepath}' to '{json_filepath}'")
+    # Sort by Gender (female, male, unknown) and then by Age for better readability
+    gender_order = ['female', 'male', 'unknown']
+    gender_age_summary['Gender'] = pd.Categorical(gender_age_summary['Gender'], categories=gender_order, ordered=True)
+    gender_age_summary = gender_age_summary.sort_values(['Gender', 'Age'])
 
-    except FileNotFoundError:
-        print(f"ERROR: The file '{csv_filepath}' was not found. Please check the path and filename.")
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        # Print full traceback for detailed error analysis
-        import traceback
-        traceback.print_exc()
+    # Convert the summary to a list of dictionaries (JSON format)
+    gender_age_data = gender_age_summary.to_dict(orient='records')
 
-# --- How to use the script ---
-csv_directory = '/Users/burt/Documents/GitHub/Facebook-Ad-Manager-Reporter'
-csv_filename = 'Le-Mauricien-LTD-Ad-sets-Jun-10-2025-Jul-9-2025.csv'
-csv_file_full_path = os.path.join(csv_directory, csv_filename)
+    # Save the JSON data to a file
+    with open(output_json_file_path, 'w') as f:
+        json.dump(gender_age_data, f, indent=4)
 
-json_file = 'ads_data.json' # Desired output JSON file name
+    print(f"Successfully processed '{csv_file_path}' and saved the data to '{output_json_file_path}'")
 
-csv_to_json(csv_file_full_path, json_file)
+except FileNotFoundError:
+    print(f"Error: '{csv_file_path}' not found. Please ensure the CSV file is in the same directory as the script.")
+except KeyError as e:
+    print(f"Error: Missing expected column in CSV: {e}. Please check your CSV headers (e.g., 'Gender', 'Age', 'Impressions', 'Reach', 'Clicks (all)').")
+except Exception as e:
+    print(f"An unexpected error occurred during CSV processing: {e}")

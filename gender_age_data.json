@@ -1,0 +1,128 @@
+[
+    {
+        "Gender": "female",
+        "Age": "18-24",
+        "Total_Impressions": 3329,
+        "Total_Reach": 2823,
+        "Total_Clicks": 73
+    },
+    {
+        "Gender": "female",
+        "Age": "25-34",
+        "Total_Impressions": 12983,
+        "Total_Reach": 12554,
+        "Total_Clicks": 431
+    },
+    {
+        "Gender": "female",
+        "Age": "35-44",
+        "Total_Impressions": 17279,
+        "Total_Reach": 16532,
+        "Total_Clicks": 740
+    },
+    {
+        "Gender": "female",
+        "Age": "45-54",
+        "Total_Impressions": 15356,
+        "Total_Reach": 14671,
+        "Total_Clicks": 769
+    },
+    {
+        "Gender": "female",
+        "Age": "55-64",
+        "Total_Impressions": 20550,
+        "Total_Reach": 19284,
+        "Total_Clicks": 1034
+    },
+    {
+        "Gender": "female",
+        "Age": "65+",
+        "Total_Impressions": 17478,
+        "Total_Reach": 16357,
+        "Total_Clicks": 989
+    },
+    {
+        "Gender": "male",
+        "Age": "18-24",
+        "Total_Impressions": 2114,
+        "Total_Reach": 1960,
+        "Total_Clicks": 42
+    },
+    {
+        "Gender": "male",
+        "Age": "25-34",
+        "Total_Impressions": 10893,
+        "Total_Reach": 9997,
+        "Total_Clicks": 254
+    },
+    {
+        "Gender": "male",
+        "Age": "35-44",
+        "Total_Impressions": 13605,
+        "Total_Reach": 12426,
+        "Total_Clicks": 329
+    },
+    {
+        "Gender": "male",
+        "Age": "45-54",
+        "Total_Impressions": 10883,
+        "Total_Reach": 9940,
+        "Total_Clicks": 361
+    },
+    {
+        "Gender": "male",
+        "Age": "55-64",
+        "Total_Impressions": 12180,
+        "Total_Reach": 11569,
+        "Total_Clicks": 435
+    },
+    {
+        "Gender": "male",
+        "Age": "65+",
+        "Total_Impressions": 12484,
+        "Total_Reach": 10694,
+        "Total_Clicks": 471
+    },
+    {
+        "Gender": "unknown",
+        "Age": "18-24",
+        "Total_Impressions": 64,
+        "Total_Reach": 22,
+        "Total_Clicks": 2
+    },
+    {
+        "Gender": "unknown",
+        "Age": "25-34",
+        "Total_Impressions": 138,
+        "Total_Reach": 118,
+        "Total_Clicks": 6
+    },
+    {
+        "Gender": "unknown",
+        "Age": "35-44",
+        "Total_Impressions": 137,
+        "Total_Reach": 132,
+        "Total_Clicks": 3
+    },
+    {
+        "Gender": "unknown",
+        "Age": "45-54",
+        "Total_Impressions": 115,
+        "Total_Reach": 105,
+        "Total_Clicks": 6
+    },
+    {
+        "Gender": "unknown",
+        "Age": "55-64",
+        "Total_Impressions": 106,
+        "Total_Reach": 104,
+        "Total_Clicks": 5
+    },
+    {
+        "Gender": "unknown",
+        "Age": "65+",
+        "Total_Impressions": 135,
+        "Total_Reach": 118,
+        "Total_Clicks": 17
+    }
+]
