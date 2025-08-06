@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Ad Campaign Performance Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        /* Custom styles for Poppins font and dark mode */
+        body {
+            font-family: 'Poppins', sans-serif; /* Global Poppins for consistency */
+            @apply bg-gray-900 text-gray-100 p-6; /* Dark mode background and default padding */
+        }
+        .card {
+            @apply bg-gray-800 p-6 rounded-xl shadow-xl mb-8 transform transition-all duration-300 hover:scale-[1.005]; /* Darker card background, increased margin-bottom */
+        }
+        .kpi-card {
+            /* Common styling for all KPI cards - using plain CSS for reliability */
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* simplified shadow */
+            text-align: center; /* text-center */
+            cursor: pointer; /* cursor-pointer */
+            color: white; /* Default text color for the card and its children */
+
+            /* Aspect ratio and positioning */
+            position: relative;
+            width: 100%; /* Make it fill its grid column */
+            padding-top: 100%; /* Creates the 1:1 aspect ratio */
+            height: 0; /* Collapses the height of the parent so padding takes over */
+            overflow: hidden; /* To prevent content spill */
+
+            /* Basic transition for hover effect */
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .kpi-card:hover {
+            transform: scale(1.05); /* hover:scale-105 */
+        }
+
+        /* Individual KPI card colors using direct CSS - PASTEL */
+        #impressions-kpi {
+            background-color: #A2E0D4; /* Pastel Teal */
+            border-bottom: 4px solid #78C3B1; /* Slightly darker pastel teal */
+            color: #1f2937; /* Darker text for readability on lighter background */
+        }
+        #clicks-kpi {
+            background-color: #F8B4C2; /* Pastel Rose */
+            border-bottom: 4px solid #E69AB2; /* Slightly darker pastel rose */
+            color: #1f2937;
+        }
+        #reach-kpi {
+            background-color: #B2D7F3; /* Pastel Blue */
+            border-bottom: 4px solid #90C1E5; /* Slightly darker pastel blue */
+            color: #1f2937;
+        }
+        #ctr-kpi {
+            background-color: #FFDDA6; /* Pastel Orange/Peach */
+            border-bottom: 4px solid #E8C18C; /* Slightly darker pastel orange */
+            color: #1f2937;
+        }
+        #video-views-kpi {
+            background-color: #F8E79F; /* Pastel Yellow */
+            border-bottom: 4px solid #E1D17A; /* Slightly darker pastel yellow */
+            color: #1f2937;
+        }
+        #link-clicks-kpi {
+            background-color: #D9C2F0; /* Pastel Purple */
+            border-bottom: 4px solid #BFACDA; /* Slightly darker pastel purple */
+            color: #1f2937;
+        }
+        /* New KPI card colors for engagement metrics */
+        #post-reactions-kpi {
+            background-color: #C3E9BB; /* Pastel Green */
+            border-bottom: 4px solid #9ECF97; /* Slightly darker pastel green */
+            color: #1f2937;
+        }
+        #comments-kpi {
+            background-color: #A5D8E0; /* Another Pastel Blue/Cyan */
+            border-bottom: 4px solid #82C5D0; /* Slightly darker pastel blue/cyan */
+            color: #1f2937;
+        }
+
+
+        /* This wrapper centers the content vertically and horizontally within the square */
+        .kpi-card .kpi-content-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center items vertically */
+            align-items: center; /* Center items horizontally */
+            padding: 1.5rem; /* Equivalent to Tailwind's p-6 */
+            box-sizing: border-box; /* Include padding in width/height calculation */
+        }
+
+        .kpi-value {
+            /* DIRECT CSS FOR MAXIMUM SIZE AND BOLDNESS */
+            font-size: 48px; /* Adjusted to fit better in PDF */
+            font-weight: 900; /* Absolute boldest */
+            line-height: 1.1; /* Slightly adjusted line height */
+            margin-top: 0.5rem; /* Equivalent to Tailwind's mt-2 */
+            color: inherit; /* Inherit color from the parent kpi-card */
+        }
+        .kpi-label {
+            /* DIRECT CSS FOR BIGGER AND BOLDER LABEL */
+            font-size: 24px; /* Still prominent */
+            font-weight: 700; /* Bold label */
+            color: inherit; /* Inherit color from the parent kpi-card */
+        }
+        /* Ensure the chart container has a defined height */
+        #chart-container {
+            position: relative;
+            height: 500px; /* Increased height for more visual impact */
+            width: 100%;
+            padding: 20px; /* Added internal padding for chart labels */
+            box-sizing: border-box; /* Include padding in width/height */
+        }
+        /* Loading overlay styles */
+        #loadingOverlay {
+            @apply fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden;
+        }
+        .spinner {
+            @apply animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500;
+        }
+
+        /* --- Table Styling (Standard CSS for dynamic parts & Google Sheets Style) --- */
+        /* Table layout fixed for better column control in PDF */
+        #dataTable {
+            table-layout: fixed;
+            width: 100%; /* Ensure it takes full width */
+        }
+
+        /* Table header */
+        #dataTable thead th {
+            background-color: #374151; /* gray-700 */
+            color: #d1d5db; /* gray-300 */
+            border: 1px solid #4b5563; /* gray-600 for darker borders */
+            font-medium;
+            text-sm;
+            uppercase;
+            font-size: 0.85rem; /* Slightly smaller font for headers */
+            padding: 0.375rem 0.5rem; /* py-1.5 px-2 - Reduced padding for tighter fit */
+        }
+
+        /* Table body cells */
+        #dataTable tbody td {
+            font-size: 0.85rem; /* Slightly smaller font for data */
+            padding: 0.375rem 0.5rem; /* py-1.5 px-2 - Reduced padding for tighter fit */
+        }
+
+
+        /* Table row borders */
+        #dataTable tbody tr {
+            border-bottom: 1px solid #374151; /* gray-700 for darker border */
+        }
+        #dataTable tbody tr:last-child { /* Remove border from last row */
+            border-bottom: none;
+        }
+
+        /* Alternating row backgrounds (dark theme) */
+        #dataTable tbody tr:nth-child(odd) {
+            background-color: #1f2937; /* gray-800 */
+            color: #e5e7eb; /* gray-200 */
+        }
+        #dataTable tbody tr:nth-child(even) {
+            background-color: #374151; /* gray-700 */
+            color: #e5e7eb; /* gray-200 */
+        }
+        /* Row hover effect (dark theme) */
+        #dataTable tbody tr:hover {
+            background-color: #4b5563; /* gray-600 */
+            transition: background-color 200ms ease-in-out;
+        }
+
+        /* Right alignment for all columns except the first (Date) */
+        #dataTable thead th:not(:first-child),
+        #dataTable tbody td:not(:first-child) {
+            text-align: right;
+        }
+        /* Ensure first column (Date) is left aligned */
+        #dataTable thead th:first-child,
+        #dataTable tbody td:first-child {
+            text-align: left;
+        }
+
+
+        /* Styling for the total row (blue accent for dark theme) */
+        #dataTable tbody .total-row {
+            font-weight: bold;
+            background-color: #1e40af; /* blue-800 */
+            border-top: 2px solid #60a5fa; /* blue-400 for emphasis */
+            color: #ffffff; /* white text */
+        }
+        #dataTable tbody .total-row td {
+            font-weight: bold;
+            background-color: inherit; /* Inherit background from the row to ensure consistency */
+            color: inherit; /* Inherit color from the row */
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="max-w-5xl mx-auto">
+        <div class="card">
+            <h1 class="text-4xl font-bold text-blue-400 mb-4 text-center">Facebook Ad Campaign Performance Dashboard</h1>
+            <p class="text-gray-300 mb-6 text-lg text-center">Upload your Facebook Ads insights JSON file to visualize key performance metrics and trends over time. All cost information has been removed for this client-focused view.</p>
+
+            <div class="space-y-4 mb-8">
+                <div>
+                    <label for="clientName" class="block text-lg font-medium text-gray-200 mb-1">Client Name:</label>
+                    <input type="text" id="clientName" placeholder="e.g., Acme Corp"
+                           class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="campaignName" class="block text-lg font-medium text-gray-200 mb-1">Campaign Name:</label>
+                    <input type="text" id="campaignName" placeholder="e.g., Spring Product Launch"
+                           class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="campaignStartDate" class="block text-lg font-medium text-gray-200 mb-1">Campaign Start Date:</label>
+                        <input type="date" id="campaignStartDate"
+                               class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="campaignEndDate" class="block text-lg font-medium text-gray-200 mb-1">Campaign End Date:</label>
+                        <input type="date" id="campaignEndDate"
+                               class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center justify-center space-y-6">
+                <label for="jsonFile" class="block text-xl font-medium text-gray-200">Select your JSON insights file:</label>
+                <input type="file" id="jsonFile" accept=".json" onchange="loadJsonFromFile(event)"
+                       class="block w-full max-w-lg text-lg text-gray-300
+                              file:mr-6 file:py-3 file:px-8
+                              file:rounded-full file:border-0
+                              file:text-lg file:font-semibold
+                              file:bg-blue-600 file:text-white
+                              hover:file:bg-blue-700 cursor-pointer transition-colors duration-200">
+                <button onclick="exportToPdf()"
+                        class="mt-8 px-8 py-3 rounded-full border-0 text-lg font-semibold bg-green-600 text-white hover:bg-green-700 cursor-pointer transition-colors duration-200">
+                    Export Dashboard to PDF
+                </button>
+                <p id="errorMessage" class="text-red-500 font-semibold text-base mt-2"></p>
+            </div>
+        </div>
+
+        <div id="exportContent"> 
+            <div id="dashboardLogoSection" class="hidden rounded-xl shadow-xl mb-8 transform transition-all duration-300 hover:scale-[1.005]">
+                <div class="bg-red-600 pt-[10px] pb-[10px] pl-[10px] flex justify-start items-center">
+                    <img src="logo.png" alt="Company Logo" class="w-[300px] h-auto rounded-lg">
+                </div>
+            </div>
+
+            <div class="card hidden bg-white text-gray-900" id="dashboardInfoSection">
+                <p class="text-2xl mb-4" id="headerClientName"></p>
+                <p class="text-2xl mb-4" id="headerCampaignName"></p>
+                <p class="text-2xl" id="headerCampaignDates"></p>
+            </div>
+
+            <div class="card">
+                <h2 class="text-3xl font-bold text-blue-400 mb-6 text-center mt-12">Performance Results</h2>
+                <div id="kpiSummary" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+                    <div class="kpi-card" id="impressions-kpi">
+                        <div class="kpi-content-wrapper">
+                            <div class="kpi-label">Total Impressions</div>
+                            <div id="totalImpressions" class="kpi-value">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="clicks-kpi">
+                        <div class="kpi-content-wrapper">
+                            <div class="kpi-label">Total Clicks</div>
+                            <div id="totalClicks" class="kpi-value">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="reach-kpi">
+                        <div class="kpi-content-wrapper">
+                            <div class="kpi-label">Total Reach</div>
+                            <div id="totalReach" class="kpi-value">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="ctr-kpi">
+                        <div class="kpi-content-wrapper">
+                            <div class="kpi-label">Average CTR</div>
+                            <div id="averageCTR" class="kpi-value">0.00%</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="video-views-kpi">
+                        <div class="kpi-content-wrapper">
+                            <div class="kpi-label">Total Video Views</div>
+                            <div id="totalVideoViews" class="kpi-value">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="link-clicks-kpi">
+                        <div class="kpi-content-wrapper">
+                            <div class="kpi-label">Total Link Clicks</div>
+                            <div id="totalLinkClicks" class="kpi-value">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="post-reactions-kpi">
+                        <div class="kpi-content-wrapper">
+                            <div class="kpi-label">Total Post Reactions</div>
+                            <div id="totalPostReactions" class="kpi-value">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="comments-kpi">
+                        <div class="kpi-content-wrapper">
+                            <div class="kpi-label">Total Comments</div>
+                            <div id="totalComments" class="kpi-value">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="text-3xl font-bold text-blue-400 mb-6 text-center mt-12">Daily Performance</h2>
+                <div id="chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="text-3xl font-bold text-blue-400 mb-6 text-center"></h2>
+                <div class="overflow-x-auto">
+                    <table id="dataTable" class="w-full border-collapse">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Impressions</th>
+                                <th>Clicks</th>
+                                <th>Reach</th>
+                                <th>CTR</th>
+                                <th>Video Views</th>
+                                <th>Link Clicks</th>
+                                <th>Post Reactions</th>
+                                <th>Comments</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div> </div>
+
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+        let performanceChart; // Declare chart variable globally
+
+        // Helper functions
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+
+        function displayErrorMessage(message) {
+            document.getElementById('errorMessage').textContent = message;
+            hideLoading(); // Hide loading on error
+        }
+
+        function clearErrorMessage() {
+            document.getElementById('errorMessage').textContent = '';
+        }
+
+        function formatNumber(num, isPercentage = false) {
+            if (isPercentage) {
+                return (num).toFixed(2) + '%';
+            }
+            return new Intl.NumberFormat().format(num);
+        }
+
+        // Function to process and display data
+        function processAndDisplayData(jsonData) {
+            clearErrorMessage();
+
+            if (!jsonData || !jsonData.data || !Array.isArray(jsonData.data)) {
+                displayErrorMessage("Invalid JSON structure. Expected an object with a 'data' array.");
+                return;
+            }
+
+            if (jsonData.data.length === 0) {
+                displayErrorMessage("No data found in the JSON file.");
+                return;
+            }
+
+            // Get values from input fields and display them in the new header
+            const clientName = document.getElementById('clientName').value;
+            const campaignName = document.getElementById('campaignName').value;
+            const campaignStartDate = document.getElementById('campaignStartDate').value;
+            const campaignEndDate = document.getElementById('campaignEndDate').value;
+
+            document.getElementById('headerClientName').textContent = clientName ? 'Client: ' + clientName : 'Client Name Here';
+            document.getElementById('headerCampaignName').textContent = campaignName ? 'Campaign: ' + campaignName : 'Campaign Name Here';
+            
+            let dateRangeText = 'Dates: ';
+            if (campaignStartDate && campaignEndDate) {
+                dateRangeText += `${campaignStartDate} to ${campaignEndDate}`;
+            } else if (campaignStartDate) {
+                dateRangeText += `Starts: ${campaignStartDate}`;
+            } else if (campaignEndDate) {
+                dateRangeText += `Ends: ${campaignEndDate}`;
+            } else {
+                dateRangeText += 'N/A';
+            }
+            document.getElementById('headerCampaignDates').textContent = dateRangeText;
+
+            // Show both parts of the new dashboard header
+            document.getElementById('dashboardLogoSection').classList.remove('hidden');
+            document.getElementById('dashboardInfoSection').classList.remove('hidden');
+
+
+            // Sort data by date_start to ensure correct chart and table order
+            jsonData.data.sort((a, b) => new Date(a.date_start) - new Date(b.date_start));
+
+            let totalImpressions = 0;
+            let totalClicks = 0;
+            let totalReach = 0;
+            let totalCTR = 0;
+            let ctrCount = 0;
+            let totalVideoViews = 0;
+            let totalLinkClicks = 0;
+            let totalPostReactions = 0; // New total for Post Reactions
+            let totalComments = 0;      // New total for Comments
+
+            const dates = [];
+            const impressionsData = [];
+            const clicksData = [];
+            const reachData = [];
+            const videoViewsData = [];
+            const linkClicksData = [];
+            // const postReactionsData = []; // Not currently used for chart but kept for consistency if needed later
+            // const commentsData = [];      // Not currently used for chart but kept for consistency if needed later
+
+            const tableBody = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = ''; // Clear existing table rows
+
+            const commonTdClasses = ['border', 'border-gray-600']; // Only apply borders and will add padding/font size via CSS
+
+            jsonData.data.forEach((item, index) => {
+                const impressions = parseInt(item.impressions || 0);
+                const clicks = parseInt(item.clicks || 0);
+                const reach = parseInt(item.reach || 0);
+                const ctr = parseFloat(item.ctr || 0);
+                
+                // Extracting values from 'actions' array with null/undefined checks
+                const videoViews = parseInt(item.actions?.find(a => a.action_type === 'video_view')?.value || 0);
+                const linkClicks = parseInt(item.actions?.find(a => a.action_type === 'link_click')?.value || 0);
+                const postReactions = parseInt(item.actions?.find(a => a.action_type === 'post_reaction')?.value || 0); // New
+                const comments = parseInt(item.actions?.find(a => a.action_type === 'comment')?.value || 0); // New
+
+                totalImpressions += impressions;
+                totalClicks += clicks;
+                totalReach += reach;
+                if (ctr > 0) {
+                    totalCTR += ctr;
+                    ctrCount++;
+                }
+                totalVideoViews += videoViews;
+                totalLinkClicks += linkClicks;
+                totalPostReactions += postReactions; // Accumulate new total
+                totalComments += comments;          // Accumulate new total
+
+                dates.push(item.date_start);
+                impressionsData.push(impressions);
+                clicksData.push(clicks);
+                reachData.push(reach);
+                videoViewsData.push(videoViews);
+                linkClicksData.push(linkClicks);
+                // postReactionsData.push(postReactions); // Add if you plan to chart these later
+                // commentsData.push(comments);          // Add if you plan to chart these later
+
+                // Populate table row
+                const row = tableBody.insertRow();
+                
+                let cell = row.insertCell();
+                cell.textContent = item.date_start;
+                cell.classList.add(...commonTdClasses);
+
+                cell = row.insertCell();
+                cell.textContent = formatNumber(impressions);
+                cell.classList.add(...commonTdClasses);
+
+                cell = row.insertCell();
+                cell.textContent = formatNumber(clicks);
+                cell.classList.add(...commonTdClasses);
+
+                cell = row.insertCell();
+                cell.textContent = formatNumber(reach);
+                cell.classList.add(...commonTdClasses);
+
+                cell = row.insertCell();
+                cell.textContent = formatNumber(ctr, true);
+                cell.classList.add(...commonTdClasses);
+
+                cell = row.insertCell();
+                cell.textContent = formatNumber(videoViews);
+                cell.classList.add(...commonTdClasses);
+
+                cell = row.insertCell();
+                cell.textContent = formatNumber(linkClicks);
+                cell.classList.add(...commonTdClasses);
+
+                // Add new cells for Engagement metrics
+                cell = row.insertCell();
+                cell.textContent = formatNumber(postReactions);
+                cell.classList.add(...commonTdClasses);
+
+                cell = row.insertCell();
+                cell.textContent = formatNumber(comments);
+                cell.classList.add(...commonTdClasses);
+            });
+
+            // Calculate average CTR (after all data is processed)
+            const avgCTR = ctrCount > 0 ? (totalCTR / ctrCount) : 0;
+
+            // Create and append the total row
+            const totalRow = tableBody.insertRow();
+            totalRow.classList.add('total-row'); // Apply custom class for styling
+
+            let totalCell = totalRow.insertCell();
+            totalCell.textContent = "Total";
+            totalCell.classList.add(...commonTdClasses);
+
+            totalCell = totalRow.insertCell();
+            totalCell.textContent = formatNumber(totalImpressions);
+            totalCell.classList.add(...commonTdClasses);
+
+            totalCell = totalRow.insertCell();
+            totalCell.textContent = formatNumber(totalClicks);
+            totalCell.classList.add(...commonTdClasses);
+
+            totalCell = totalRow.insertCell();
+            totalCell.textContent = formatNumber(totalReach);
+            totalCell.classList.add(...commonTdClasses);
+
+            totalCell = totalRow.insertCell();
+            totalCell.textContent = formatNumber(avgCTR, true);
+            totalCell.classList.add(...commonTdClasses);
+
+            totalCell = totalRow.insertCell();
+            totalCell.textContent = formatNumber(totalVideoViews);
+            totalCell.classList.add(...commonTdClasses);
+
+            totalCell = totalRow.insertCell();
+            totalCell.textContent = formatNumber(totalLinkClicks);
+            totalCell.classList.add(...commonTdClasses);
+
+            // Add new total cells for Engagement metrics
+            totalCell = totalRow.insertCell();
+            totalCell.textContent = formatNumber(totalPostReactions);
+            totalCell.classList.add(...commonTdClasses);
+
+            totalCell = totalRow.insertCell();
+            totalCell.textContent = formatNumber(totalComments);
+            totalCell.classList.add(...commonTdClasses);
+
+
+            // Display KPIs
+            document.getElementById('totalImpressions').textContent = formatNumber(totalImpressions);
+            document.getElementById('totalClicks').textContent = formatNumber(totalClicks);
+            document.getElementById('totalReach').textContent = formatNumber(totalReach);
+            document.getElementById('averageCTR').textContent = formatNumber(avgCTR, true);
+            document.getElementById('totalVideoViews').textContent = formatNumber(totalVideoViews);
+            document.getElementById('totalLinkClicks').textContent = formatNumber(totalLinkClicks);
+            document.getElementById('totalPostReactions').textContent = formatNumber(totalPostReactions); // Update new KPI
+            document.getElementById('totalComments').textContent = formatNumber(totalComments);          // Update new KPI
+
+
+            // Render Chart
+            renderPerformanceChart(dates, impressionsData, clicksData, reachData, videoViewsData, linkClicksData);
+            hideLoading(); // Hide loading after data is processed and chart rendered
+        }
+
+        // Function to render the Chart.js graph
+        function renderPerformanceChart(dates, impressionsData, clicksData, reachData, videoViewsData, linkClicksData) {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+
+            // Destroy existing chart instance if it exists
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+
+            performanceChart = new Chart(ctx, {
+                type: 'bar', // Stacked Bar chart
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'Impressions',
+                            data: impressionsData,
+                            backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                            borderColor: 'rgb(75, 192, 192)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Clicks',
+                            data: clicksData,
+                            backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                            borderColor: 'rgb(255, 99, 132)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Reach',
+                            data: reachData,
+                            backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                            borderColor: 'rgb(54, 162, 235)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Video Views',
+                            data: videoViewsData,
+                            backgroundColor: 'rgba(255, 205, 86, 0.8)',
+                            borderColor: 'rgb(255, 205, 86)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Link Clicks',
+                            data: linkClicksData,
+                            backgroundColor: 'rgba(153, 102, 255, 0.8)',
+                            borderColor: 'rgb(153, 102, 255)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Daily Facebook Ad Performance (Stacked Chart)',
+                            font: {
+                                size: 22,
+                                weight: 'bold',
+                                family: 'Poppins' // Ensured Poppins font
+                            },
+                            color: '#93c5fd'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleFont: {
+                                size: 16,
+                                family: 'Poppins' // Ensured Poppins font
+                            },
+                            bodyFont: {
+                                size: 14,
+                                family: 'Poppins' // Ensured Poppins font
+                            },
+                            padding: 12,
+                            cornerRadius: 8
+                        },
+                        legend: {
+                            labels: {
+                                color: '#e2e8f0',
+                                font: {
+                                    size: 14,
+                                    family: 'Poppins' // Ensured Poppins font
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true, // Make x-axis stacked
+                            title: {
+                                display: true,
+                                text: 'Date',
+                                font: {
+                                    size: 16,
+                                    weight: 'bold',
+                                    family: 'Poppins' // Ensured Poppins font
+                                },
+                                color: '#60a5fa'
+                            },
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#a0a0a0',
+                                font: {
+                                    family: 'Poppins' // Ensured Poppins font
+                                }
+                            }
+                        },
+                        y: {
+                            stacked: true, // Make y-axis stacked
+                            title: {
+                                display: true,
+                                text: 'Count',
+                                font: {
+                                    size: 16,
+                                    weight: 'bold',
+                                    family: 'Poppins' // Ensured Poppins font
+                                },
+                                color: '#60a5fa'
+                            },
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(100, 100, 100, 0.3)'
+                            },
+                            ticks: {
+                                color: '#a0a0a0',
+                                font: {
+                                    family: 'Poppins' // Ensured Poppins font
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Function to load JSON from file input
+        function loadJsonFromFile(event) {
+            showLoading(); // Show loading indicator
+            const file = event.target.files[0];
+            if (!file) {
+                displayErrorMessage("No file selected.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const jsonData = JSON.parse(e.target.result);
+                    // If JSON parsing is successful, process and display data
+                    processAndDisplayData(jsonData);
+                }
+                catch (e) {
+                    displayErrorMessage("Error parsing file as JSON: " + e.message);
+                }
+            };
+            reader.onerror = function() {
+                displayErrorMessage("Error reading file.");
+            };
+            reader.readAsText(file);
+        }
+
+        // Function to export dashboard content to PDF
+        function exportToPdf() {
+            const element = document.getElementById('exportContent');
+            if (!element) {
+                displayErrorMessage("Export content not found.");
+                return;
+            }
+
+            // Options for html2pdf
+            const opt = {
+                margin: [10, 10, 10, 10], // top, left, bottom, right in millimeters
+                filename: 'Facebook_Ad_Dashboard.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true }, // Higher scale for better image quality
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', width: 190 } // A4 portrait format, force width to fit
+            };
+
+            // Show loading spinner during export
+            showLoading();
+
+            // Use a small timeout to ensure loading spinner is rendered before PDF generation starts
+            setTimeout(() => {
+                html2pdf().set(opt).from(element).save().then(() => {
+                    hideLoading(); // Hide loading after PDF is saved
+                }).catch(error => {
+                    console.error('PDF export failed:', error);
+                    displayErrorMessage('PDF export failed. Please check the browser console for more details.');
+                    hideLoading();
+                });
+            }, 100); // Small delay to allow UI to update
+        }
+    </script>
+</body>
+</html>
